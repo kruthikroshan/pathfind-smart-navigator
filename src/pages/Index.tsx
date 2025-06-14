@@ -14,7 +14,11 @@ export default function Index() {
   const [selectionMode, setSelectionMode] = useState<'source' | 'destination' | null>(null);
   const { toast } = useToast();
 
+  console.log('Index render:', { source, destination, route, selectionMode });
+
   const handleLocationSelect = (location: Location, type: 'source' | 'destination') => {
+    console.log('handleLocationSelect called:', { location, type });
+    
     if (type === 'source') {
       setSource(location);
       toast({
@@ -24,7 +28,7 @@ export default function Index() {
     } else {
       setDestination(location);
       toast({
-        title: "Destination Location Set",
+        title: "Destination Location Set", 
         description: location.name || `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`,
       });
     }
@@ -32,6 +36,8 @@ export default function Index() {
   };
 
   const handleCalculateRoute = async () => {
+    console.log('Calculate route called:', { source, destination });
+    
     if (!source || !destination) {
       toast({
         title: "Missing Locations",
@@ -44,9 +50,12 @@ export default function Index() {
     setIsCalculating(true);
     
     try {
+      console.log('Starting route calculation...');
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       const result = findShortestPath(source, destination, routeType);
+      console.log('Route calculation result:', result);
+      
       setRoute(result);
       
       toast({
@@ -143,13 +152,19 @@ export default function Index() {
                     {source && (
                       <div className="flex items-center space-x-1">
                         <div className="w-2 h-2 bg-green-300 rounded-full"></div>
-                        <span>Source: {source.name}</span>
+                        <span>Source: {source.name?.split(',')[0] || 'Selected'}</span>
                       </div>
                     )}
                     {destination && (
                       <div className="flex items-center space-x-1">
                         <div className="w-2 h-2 bg-red-300 rounded-full"></div>
-                        <span>Destination: {destination.name}</span>
+                        <span>Destination: {destination.name?.split(',')[0] || 'Selected'}</span>
+                      </div>
+                    )}
+                    {route && (
+                      <div className="flex items-center space-x-1">
+                        <div className="w-2 h-2 bg-yellow-300 rounded-full"></div>
+                        <span>Distance: {route.totalDistance} km</span>
                       </div>
                     )}
                   </div>

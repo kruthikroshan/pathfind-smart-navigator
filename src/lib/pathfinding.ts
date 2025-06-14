@@ -89,6 +89,8 @@ function calculateBearing(lat1: number, lon1: number, lat2: number, lon2: number
 
 // Generate a realistic graph with intermediate points
 function generateGraph(source: Location, destination: Location, routeType: 'shortest' | 'safest'): { nodes: GraphNode[], edges: GraphEdge[] } {
+  console.log('Generating graph for route:', { source, destination, routeType });
+  
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
   
@@ -99,16 +101,19 @@ function generateGraph(source: Location, destination: Location, routeType: 'shor
   
   // Generate intermediate waypoints
   const distance = calculateDistance(source.lat, source.lng, destination.lat, destination.lng);
-  const numWaypoints = Math.min(Math.max(Math.floor(distance / 100), 2), 8);
+  console.log('Total distance between points:', distance, 'km');
+  
+  const numWaypoints = Math.min(Math.max(Math.floor(distance / 200), 1), 5);
+  console.log('Number of waypoints to generate:', numWaypoints);
   
   // Create waypoints along the route
-  for (let i = 1; i < numWaypoints; i++) {
-    const ratio = i / numWaypoints;
+  for (let i = 1; i <= numWaypoints; i++) {
+    const ratio = i / (numWaypoints + 1);
     const lat = source.lat + (destination.lat - source.lat) * ratio;
     const lng = source.lng + (destination.lng - source.lng) * ratio;
     
     // Add some variation for realistic routing
-    const variation = 0.01 * (Math.random() - 0.5);
+    const variation = 0.005 * (Math.random() - 0.5);
     const waypoint: GraphNode = {
       id: `waypoint_${i}`,
       lat: lat + variation,
@@ -119,35 +124,35 @@ function generateGraph(source: Location, destination: Location, routeType: 'shor
     nodes.push(waypoint);
   }
   
-  // Connect nodes with edges
-  for (let i = 0; i < nodes.length; i++) {
-    for (let j = i + 1; j < nodes.length; j++) {
-      const node1 = nodes[i];
-      const node2 = nodes[j];
-      const dist = calculateDistance(node1.lat, node1.lng, node2.lat, node2.lng);
-      
-      // Weight calculation based on route type
-      let weight = dist;
-      if (routeType === 'safest') {
-        // Apply safety factor (simulated)
-        const safetyFactor = 0.8 + (Math.random() * 0.4); // 0.8 to 1.2
-        weight = dist * (2 - safetyFactor); // Safer routes get lower weights
-      }
-      
-      edges.push({
-        from: node1.id,
-        to: node2.id,
-        weight,
-        distance: dist
-      });
+  // Connect nodes with edges (create a path through waypoints)
+  for (let i = 0; i < nodes.length - 1; i++) {
+    const node1 = nodes[i];
+    const node2 = nodes[i + 1];
+    const dist = calculateDistance(node1.lat, node1.lng, node2.lat, node2.lng);
+    
+    // Weight calculation based on route type
+    let weight = dist;
+    if (routeType === 'safest') {
+      const safetyFactor = 0.9 + (Math.random() * 0.2); // 0.9 to 1.1
+      weight = dist * safetyFactor;
     }
+    
+    edges.push({
+      from: node1.id,
+      to: node2.id,
+      weight,
+      distance: dist
+    });
   }
   
+  console.log('Generated graph:', { nodes: nodes.length, edges: edges.length });
   return { nodes, edges };
 }
 
 // Dijkstra's algorithm implementation
 export function findShortestPath(source: Location, destination: Location, routeType: 'shortest' | 'safest'): RouteResult {
+  console.log('Finding shortest path:', { source, destination, routeType });
+  
   const { nodes, edges } = generateGraph(source, destination, routeType);
   
   // Create adjacency list
@@ -202,6 +207,8 @@ export function findShortestPath(source: Location, destination: Location, routeT
     currentId = previous.get(currentId) || null;
   }
   
+  console.log('Reconstructed path:', path);
+  
   // Calculate total distance and time
   let totalDistance = 0;
   for (let i = 0; i < path.length - 1; i++) {
@@ -209,6 +216,8 @@ export function findShortestPath(source: Location, destination: Location, routeT
     const next = path[i + 1];
     totalDistance += calculateDistance(current.lat, current.lng, next.lat, next.lng);
   }
+  
+  console.log('Total calculated distance:', totalDistance, 'km');
   
   // Generate directions
   const directions: Direction[] = [];
@@ -234,19 +243,24 @@ export function findShortestPath(source: Location, destination: Location, routeT
     });
   }
   
-  const totalTime = Math.round(totalDistance * 1.2); // Approximate time in minutes
+  const totalTime = Math.round(totalDistance * 1.2); // Approximate time in minutes (assuming ~50 km/h average)
   
-  return {
+  const result = {
     path,
-    totalDistance: `${Math.round(totalDistance * 10) / 10} km`,
-    totalTime: `${totalTime} min`,
+    totalDistance: `${Math.round(totalDistance * 10) / 10}`,
+    totalTime: `${totalTime}`,
     algorithm: "Dijkstra's",
     directions
   };
+  
+  console.log('Final route result:', result);
+  return result;
 }
 
 // Search locations using OpenStreetMap Nominatim API
 export async function searchLocations(query: string): Promise<Location[]> {
+  console.log('Searching locations for:', query);
+  
   try {
     const response = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=10&addressdetails=1`
@@ -257,6 +271,7 @@ export async function searchLocations(query: string): Promise<Location[]> {
     }
     
     const data = await response.json();
+    console.log('Search results:', data);
     
     return data.map((item: any) => ({
       lat: parseFloat(item.lat),
@@ -284,26 +299,30 @@ export async function searchLocations(query: string): Promise<Location[]> {
 
 // Search nearby places (restaurants, hotels, etc.)
 export async function searchNearbyPlaces(location: Location, type: string): Promise<Location[]> {
+  console.log('Searching nearby places:', { location, type });
+  
   try {
-    // This would typically use Overpass API or similar for real POI data
-    // For demo purposes, generating sample nearby places
-    const placeTypes = {
-      restaurant: ['Pizza Palace', 'Burger Haven', 'Sushi Express', 'Coffee Corner'],
-      hotel: ['Grand Hotel', 'Budget Inn', 'Luxury Resort', 'Business Lodge'],
-      police: ['Police Station Central', 'Security Post', 'Emergency Services'],
-      train: ['Central Station', 'Metro Hub', 'Railway Terminal'],
-      airport: ['International Airport', 'Regional Airfield', 'Heliport'],
-      all: ['Shopping Mall', 'Bank', 'Hospital', 'School', 'Park']
+    // Generate sample nearby places with realistic coordinates
+    const placeTypes: { [key: string]: string[] } = {
+      restaurant: ['Pizza Palace', 'Burger Haven', 'Sushi Express', 'Coffee Corner', 'Italian Bistro'],
+      hotel: ['Grand Hotel', 'Budget Inn', 'Luxury Resort', 'Business Lodge', 'Comfort Suites'],
+      police: ['Police Station Central', 'Security Post', 'Emergency Services', 'Police Headquarters'],
+      train: ['Central Station', 'Metro Hub', 'Railway Terminal', 'Train Stop'],
+      airport: ['International Airport', 'Regional Airfield', 'Heliport', 'Air Terminal'],
+      all: ['Shopping Mall', 'Bank', 'Hospital', 'School', 'Park', 'Gas Station', 'Pharmacy']
     };
     
-    const names = placeTypes[type as keyof typeof placeTypes] || placeTypes.all;
+    const names = placeTypes[type] || placeTypes.all;
     
-    return names.map((name, index) => ({
+    const nearbyPlaces = names.map((name, index) => ({
       lat: location.lat + (Math.random() - 0.5) * 0.02,
       lng: location.lng + (Math.random() - 0.5) * 0.02,
-      name: `${name} Near ${location.name.split(',')[0]}`,
+      name: `${name}`,
       category: type === 'all' ? 'place' : type
     }));
+    
+    console.log('Generated nearby places:', nearbyPlaces);
+    return nearbyPlaces;
   } catch (error) {
     console.error('Nearby search error:', error);
     return [];

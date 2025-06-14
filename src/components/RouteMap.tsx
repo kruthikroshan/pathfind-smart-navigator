@@ -47,12 +47,14 @@ function MapClickHandler({
 }) {
   useMapEvents({
     click: (e) => {
+      console.log('Map clicked:', e.latlng);
       if (selectionMode) {
         const location: Location = {
           lat: e.latlng.lat,
           lng: e.latlng.lng,
           name: `${selectionMode === 'source' ? 'Source' : 'Destination'} (${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)})`
         };
+        console.log('Setting location:', location, 'as', selectionMode);
         onLocationSelect(location, selectionMode);
       }
     }
@@ -70,21 +72,31 @@ export default function RouteMap({
 }: RouteMapProps) {
   const mapRef = useRef<any>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>([40.7128, -74.0060]); // New York
-  const [mapZoom, setMapZoom] = useState(13);
+  const [mapZoom, setMapZoom] = useState(4);
+
+  console.log('RouteMap render:', { source, destination, route, selectionMode });
 
   // Update map center when locations change
   useEffect(() => {
+    console.log('Map center effect:', { route, destination, source });
     if (route && route.path.length > 0) {
       const bounds = route.path.map(node => [node.lat, node.lng] as [number, number]);
+      console.log('Fitting bounds to route:', bounds);
       if (mapRef.current) {
-        mapRef.current.fitBounds(bounds, { padding: [50, 50] });
+        try {
+          mapRef.current.fitBounds(bounds, { padding: [50, 50] });
+        } catch (error) {
+          console.error('Error fitting bounds:', error);
+        }
       }
     } else if (destination) {
+      console.log('Centering on destination:', destination);
       setMapCenter([destination.lat, destination.lng]);
-      setMapZoom(13);
+      setMapZoom(10);
     } else if (source) {
+      console.log('Centering on source:', source);
       setMapCenter([source.lat, source.lng]);
-      setMapZoom(13);
+      setMapZoom(10);
     }
   }, [source, destination, route]);
 
@@ -92,6 +104,8 @@ export default function RouteMap({
   const routeCoordinates = route 
     ? route.path.map(node => [node.lat, node.lng] as [number, number])
     : [];
+
+  console.log('Route coordinates:', routeCoordinates);
 
   return (
     <div className="h-full w-full relative">
@@ -101,6 +115,7 @@ export default function RouteMap({
         zoom={mapZoom}
         style={{ height: '100%', width: '100%' }}
         className="rounded-lg shadow-lg"
+        key={`${mapCenter[0]}-${mapCenter[1]}-${mapZoom}`}
       >
         {/* Map tiles */}
         <TileLayer
@@ -166,7 +181,7 @@ export default function RouteMap({
         {/* Route waypoint markers */}
         {route && route.path.slice(1, -1).map((node, index) => (
           <Marker
-            key={node.id}
+            key={`waypoint-${index}`}
             position={[node.lat, node.lng]}
             icon={new Icon({
               iconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjMzMzIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iNCIvPjwvc3ZnPg==',
