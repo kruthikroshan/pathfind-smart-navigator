@@ -2,7 +2,7 @@
 
 ## Project info
 
-**URL**: https://pathfindsmartnavigator.com](https://pathfind-smart-navigator.netlify.app
+**URL**: [https://pathfindsmartnavigator.com](https://pathfind-smart-navigator.netlify.app](https://pathfind-smart-navigator.netlify.app/)
 /projects/53124f5d-3185-4939-a449-995e0827562a
 
 # Step 1: Clone the repository using the project's Git URL.
