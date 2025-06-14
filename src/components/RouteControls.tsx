@@ -5,8 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { MapPin, Navigation, Search, Clock, Route, Zap } from 'lucide-react';
-import { Location, RouteResult, searchLocations } from '@/lib/pathfinding';
+import { MapPin, Navigation, Search, Clock, Route, Zap, Hotel, TrainFront, Airport, Restaurant, Police } from 'lucide-react';
+import { Location, RouteResult, searchLocations, searchNearbyPlaces } from '@/lib/pathfinding';
 import { useToast } from '@/hooks/use-toast';
 
 interface RouteControlsProps {
@@ -38,8 +38,10 @@ export default function RouteControls({
 }: RouteControlsProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Location[]>([]);
+  const [nearbyPlaces, setNearbyPlaces] = useState<Location[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<string>('all');
   const { toast } = useToast();
 
   // Search locations
@@ -69,6 +71,25 @@ export default function RouteControls({
     return () => clearTimeout(searchTimeout);
   }, [searchQuery, toast]);
 
+  // Search nearby places when locations are set
+  useEffect(() => {
+    const searchNearby = async () => {
+      if (source || destination) {
+        const location = destination || source;
+        if (location) {
+          try {
+            const places = await searchNearbyPlaces(location, activeFilter);
+            setNearbyPlaces(places);
+          } catch (error) {
+            console.error('Failed to search nearby places:', error);
+          }
+        }
+      }
+    };
+
+    searchNearby();
+  }, [source, destination, activeFilter]);
+
   const handleSearchResultClick = (location: Location, type: 'source' | 'destination') => {
     if (type === 'source') {
       onSourceSelect(location);
@@ -87,50 +108,68 @@ export default function RouteControls({
 
   const canCalculateRoute = source && destination && !isCalculating;
 
+  const placeFilters = [
+    { id: 'all', label: 'All Places', icon: MapPin },
+    { id: 'restaurant', label: 'Restaurants', icon: Restaurant },
+    { id: 'hotel', label: 'Hotels', icon: Hotel },
+    { id: 'police', label: 'Police', icon: Police },
+    { id: 'train', label: 'Train Stations', icon: TrainFront },
+    { id: 'airport', label: 'Airports', icon: Airport },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Search Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      {/* Enhanced Search Section */}
+      <Card className="border-2 border-blue-100">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-green-50">
+          <CardTitle className="flex items-center gap-2 text-blue-700">
             <Search className="h-5 w-5" />
-            Location Search
+            Global Location Search
           </CardTitle>
-          <CardDescription>
-            Search for cities, countries, districts, villages, and landmarks worldwide
+          <CardDescription className="text-blue-600">
+            Search cities, countries, districts, villages, and landmarks worldwide
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           <div className="relative">
             <Input
-              placeholder="Search for locations (e.g., New York, London, Tokyo)..."
+              placeholder="Search for any location worldwide..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pr-10"
+              className="pr-12 h-12 text-lg border-2 border-blue-200 focus:border-blue-400"
             />
-            <Search className="absolute right-3 top-2.5 h-5 w-5 text-muted-foreground" />
+            <Button 
+              size="sm" 
+              className="absolute right-1 top-1 bg-blue-500 hover:bg-blue-600"
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">
+            🌍 Search for any location worldwide • Click map to select coordinates
           </div>
 
           {isSearching && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+            <div className="flex items-center gap-2 text-sm text-blue-600">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
               Searching locations...
             </div>
           )}
 
           {showResults && searchResults.length > 0 && (
             <div className="space-y-2">
-              <p className="text-sm font-medium">Search Results:</p>
-              <div className="max-h-60 overflow-y-auto space-y-1">
+              <p className="text-sm font-medium text-gray-700">Search Results:</p>
+              <div className="max-h-60 overflow-y-auto space-y-2">
                 {searchResults.map((location, index) => (
-                  <div key={index} className="border rounded-lg p-3 space-y-2">
-                    <p className="text-sm font-medium line-clamp-2">{location.name}</p>
+                  <div key={index} className="border-2 border-gray-100 rounded-xl p-4 hover:border-blue-300 transition-colors">
+                    <p className="text-sm font-medium line-clamp-2 mb-2">{location.name}</p>
                     <div className="flex gap-2">
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleSearchResultClick(location, 'source')}
-                        className="flex-1"
+                        className="flex-1 text-green-600 border-green-200 hover:bg-green-50"
                       >
                         Set as Source
                       </Button>
@@ -138,7 +177,7 @@ export default function RouteControls({
                         size="sm"
                         variant="outline"
                         onClick={() => handleSearchResultClick(location, 'destination')}
-                        className="flex-1"
+                        className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
                       >
                         Set as Destination
                       </Button>
@@ -148,39 +187,33 @@ export default function RouteControls({
               </div>
             </div>
           )}
-
-          {showResults && searchResults.length === 0 && !isSearching && (
-            <p className="text-sm text-muted-foreground">No locations found. Try a different search term.</p>
-          )}
         </CardContent>
       </Card>
 
       {/* Location Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <Card className="border-2 border-green-100">
+        <CardHeader className="bg-gradient-to-r from-green-50 to-blue-50">
+          <CardTitle className="flex items-center gap-2 text-green-700">
             <MapPin className="h-5 w-5" />
-            Locations
+            Source & Destination
           </CardTitle>
-          <CardDescription>
-            Select your source and destination points
-          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <CardContent className="space-y-4 pt-6">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Button
                 variant={selectionMode === 'source' ? 'default' : 'outline'}
                 onClick={() => onSelectionModeChange(selectionMode === 'source' ? null : 'source')}
-                className="w-full justify-start"
+                className="w-full justify-start h-12 text-left"
               >
-                <MapPin className="h-4 w-4 mr-2" />
-                Select Source
+                <MapPin className="h-4 w-4 mr-2 text-green-500" />
+                Select Source Location
               </Button>
               {source && (
-                <div className="text-xs p-2 bg-muted rounded border-l-4 border-l-green-500">
-                  <p className="font-medium text-green-600">Source Location</p>
-                  <p className="truncate">{source.name}</p>
+                <div className="text-xs p-3 bg-green-50 rounded-lg border-l-4 border-l-green-500">
+                  <p className="font-medium text-green-700">📍 Source Location</p>
+                  <p className="text-green-600 font-medium">{source.name}</p>
+                  <p className="text-green-500 text-xs">{source.lat.toFixed(4)}, {source.lng.toFixed(4)}</p>
                 </div>
               )}
             </div>
@@ -189,15 +222,16 @@ export default function RouteControls({
               <Button
                 variant={selectionMode === 'destination' ? 'default' : 'outline'}
                 onClick={() => onSelectionModeChange(selectionMode === 'destination' ? null : 'destination')}
-                className="w-full justify-start"
+                className="w-full justify-start h-12 text-left"
               >
-                <Navigation className="h-4 w-4 mr-2" />
-                Select Destination
+                <Navigation className="h-4 w-4 mr-2 text-red-500" />
+                Select Destination Location
               </Button>
               {destination && (
-                <div className="text-xs p-2 bg-muted rounded border-l-4 border-l-red-500">
-                  <p className="font-medium text-red-600">Destination Location</p>
-                  <p className="truncate">{destination.name}</p>
+                <div className="text-xs p-3 bg-red-50 rounded-lg border-l-4 border-l-red-500">
+                  <p className="font-medium text-red-700">🎯 Destination Location</p>
+                  <p className="text-red-600 font-medium">{destination.name}</p>
+                  <p className="text-red-500 text-xs">{destination.lat.toFixed(4)}, {destination.lng.toFixed(4)}</p>
                 </div>
               )}
             </div>
@@ -205,108 +239,153 @@ export default function RouteControls({
         </CardContent>
       </Card>
 
-      {/* Route Options */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      {/* Algorithm Selection */}
+      <Card className="border-2 border-purple-100">
+        <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50">
+          <CardTitle className="flex items-center gap-2 text-purple-700">
             <Route className="h-5 w-5" />
-            Route Options
+            Algorithm Type
           </CardTitle>
-          <CardDescription>
-            Choose your preferred route calculation method
-          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-2">
+        <CardContent className="space-y-4 pt-6">
+          <div className="grid grid-cols-2 gap-3">
             <Button
               variant={routeType === 'shortest' ? 'default' : 'outline'}
               onClick={() => onRouteTypeChange('shortest')}
-              className="justify-start"
+              className="h-16 flex-col space-y-1"
             >
-              <Zap className="h-4 w-4 mr-2" />
-              Shortest
+              <Zap className="h-5 w-5" />
+              <div className="text-center">
+                <div className="font-medium">Shortest</div>
+                <div className="text-xs opacity-75">Distance</div>
+              </div>
             </Button>
             <Button
               variant={routeType === 'safest' ? 'default' : 'outline'}
               onClick={() => onRouteTypeChange('safest')}
-              className="justify-start"
+              className="h-16 flex-col space-y-1"
             >
-              <MapPin className="h-4 w-4 mr-2" />
-              Safest
+              <MapPin className="h-5 w-5" />
+              <div className="text-center">
+                <div className="font-medium">Safest</div>
+                <div className="text-xs opacity-75">Security</div>
+              </div>
             </Button>
           </div>
 
           <Button
             onClick={onCalculateRoute}
             disabled={!canCalculateRoute}
-            className="w-full"
+            className="w-full h-14 text-lg bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600"
             size="lg"
           >
             {isCalculating ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                 Calculating Route...
               </>
             ) : (
               <>
-                <Navigation className="h-4 w-4 mr-2" />
-                Calculate Route
+                <Navigation className="h-5 w-5 mr-2" />
+                Find Optimal Route
               </>
             )}
           </Button>
         </CardContent>
       </Card>
 
-      {/* Route Information */}
+      {/* Nearby Places */}
+      {(source || destination) && (
+        <Card className="border-2 border-orange-100">
+          <CardHeader className="bg-gradient-to-r from-orange-50 to-yellow-50">
+            <CardTitle className="flex items-center gap-2 text-orange-700">
+              <MapPin className="h-5 w-5" />
+              Nearby Places
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-6">
+            <div className="flex flex-wrap gap-2">
+              {placeFilters.map((filter) => {
+                const IconComponent = filter.icon;
+                return (
+                  <Button
+                    key={filter.id}
+                    variant={activeFilter === filter.id ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setActiveFilter(filter.id)}
+                    className="text-xs"
+                  >
+                    <IconComponent className="h-3 w-3 mr-1" />
+                    {filter.label}
+                  </Button>
+                );
+              })}
+            </div>
+
+            {nearbyPlaces.length > 0 && (
+              <div className="max-h-40 overflow-y-auto space-y-2">
+                {nearbyPlaces.slice(0, 5).map((place, index) => (
+                  <div key={index} className="text-xs p-2 bg-orange-50 rounded border">
+                    <p className="font-medium text-orange-800">{place.name}</p>
+                    <p className="text-orange-600">{place.category || 'Location'}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Enhanced Route Information */}
       {route && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <Card className="border-2 border-blue-100">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-green-50">
+            <CardTitle className="flex items-center gap-2 text-blue-700">
               <Route className="h-5 w-5" />
               Route Information
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold text-blue-600">{route.totalDistance} km</p>
-                <p className="text-xs text-muted-foreground">Distance</p>
+              <div className="bg-blue-50 p-4 rounded-xl">
+                <p className="text-2xl font-bold text-blue-600">{route.totalDistance}</p>
+                <p className="text-xs text-blue-500 font-medium">Kilometers</p>
               </div>
-              <div>
-                <p className="text-2xl font-bold text-green-600">{route.totalTime} min</p>
-                <p className="text-xs text-muted-foreground">Est. Time</p>
+              <div className="bg-green-50 p-4 rounded-xl">
+                <p className="text-2xl font-bold text-green-600">{route.totalTime}</p>
+                <p className="text-xs text-green-500 font-medium">Minutes</p>
               </div>
-              <div>
+              <div className="bg-purple-50 p-4 rounded-xl">
                 <p className="text-2xl font-bold text-purple-600">{route.path.length}</p>
-                <p className="text-xs text-muted-foreground">Waypoints</p>
+                <p className="text-xs text-purple-500 font-medium">Waypoints</p>
               </div>
             </div>
 
             <Separator />
 
             <div>
-              <Badge variant="secondary" className="mb-2">
-                {route.algorithm}
+              <Badge variant="secondary" className="mb-2 bg-blue-100 text-blue-700">
+                {route.algorithm} Algorithm
               </Badge>
             </div>
 
-            {/* Turn-by-turn directions */}
+            {/* Enhanced Turn-by-turn directions */}
             <div className="space-y-2">
-              <h4 className="font-medium flex items-center gap-2">
+              <h4 className="font-medium flex items-center gap-2 text-gray-700">
                 <Clock className="h-4 w-4" />
                 Turn-by-Turn Directions
               </h4>
               <div className="max-h-60 overflow-y-auto space-y-2">
                 {route.directions.map((direction, index) => (
-                  <div key={index} className="flex items-start gap-3 p-2 rounded border">
-                    <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs font-medium text-blue-600">
+                  <div key={index} className="flex items-start gap-3 p-3 rounded-xl border bg-gray-50">
+                    <div className="flex-shrink-0 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-xs font-bold text-white">
                       {index + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{direction.instruction}</p>
+                      <p className="text-sm font-medium text-gray-800">{direction.instruction}</p>
                       {direction.distance > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          {direction.distance} km • {direction.direction}
+                        <p className="text-xs text-gray-600 mt-1">
+                          📏 {direction.distance} km • 🧭 {direction.direction}
                         </p>
                       )}
                     </div>
