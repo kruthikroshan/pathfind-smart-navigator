@@ -2,8 +2,7 @@
 
 ## Project info
 
-**URL**: https://pathfindsmartnavigator.com
-
+**URL**: [![Netlify Status](https://api.netlify.com/api/v1/badges/d82763ea-5435-40de-82ee-518a7798370d/deploy-status)](https://app.netlify.com/projects/smartrouteplanner-navigator/deploys)
 # Step 1: Clone the repository using the project's Git URL.
 git clone <YOUR_GIT_URL>
 
