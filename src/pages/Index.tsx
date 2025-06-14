@@ -139,8 +139,8 @@ export default function Index() {
               Using Dijkstra's algorithm for optimal route calculation with OpenStreetMap data
             </p>
           </div>
-        </footer>
-      </main>
+        </div>
+      </footer>
     </div>
   );
 }
