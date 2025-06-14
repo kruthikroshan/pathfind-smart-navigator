@@ -5,7 +5,7 @@ import { Icon } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Location, RouteResult } from '@/lib/pathfinding';
 
-// Fix for default markers
+// Fix for default markers in Leaflet
 delete (Icon.Default.prototype as any)._getIconUrl;
 Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
