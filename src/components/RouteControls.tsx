@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { MapPin, Navigation, Search, Clock, Route, Zap, Hotel, TrainFront, Airport, Restaurant, Police } from 'lucide-react';
+import { MapPin, Navigation, Search, Clock, Route, Zap, Hotel, TrainFront, Plane, UtensilsCrossed, Shield } from 'lucide-react';
 import { Location, RouteResult, searchLocations, searchNearbyPlaces } from '@/lib/pathfinding';
 import { useToast } from '@/hooks/use-toast';
 
@@ -110,11 +110,11 @@ export default function RouteControls({
 
   const placeFilters = [
     { id: 'all', label: 'All Places', icon: MapPin },
-    { id: 'restaurant', label: 'Restaurants', icon: Restaurant },
+    { id: 'restaurant', label: 'Restaurants', icon: UtensilsCrossed },
     { id: 'hotel', label: 'Hotels', icon: Hotel },
-    { id: 'police', label: 'Police', icon: Police },
+    { id: 'police', label: 'Police', icon: Shield },
     { id: 'train', label: 'Train Stations', icon: TrainFront },
-    { id: 'airport', label: 'Airports', icon: Airport },
+    { id: 'airport', label: 'Airports', icon: Plane },
   ];
 
   return (
